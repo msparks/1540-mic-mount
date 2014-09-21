@@ -52,18 +52,9 @@ module mount() {
 }
 
 module mount_clip() {
-  // The clip attaches under the headband and shares its curvature.
-  gap_fill(sweep=15, radius=kHeadbandInnerRadius - kHeadbandThickness);
-
-  // Clip anchor.
-  gap_fill(sweep=5, radius=kHeadbandInnerRadius - kHeadbandThickness,
-           rotation=3.5);
   gap_fill(sweep=5, radius=kHeadbandInnerRadius, rotation=5);
-  clip_rounder(kHeadbandThickness * 2, -2.5);
-
-  translate([0, 0, -kHeadbandThickness])
-  clip_rounder(kHeadbandThickness, 7.5);
-  clip_rounder(kHeadbandThickness * 2, -7.5);
+  clip_rounder(kHeadbandThickness, -2.5);
+  clip_rounder(kHeadbandThickness, -7.5);
 }
 
 module gap_fill(sweep, radius, rotation=0) {
