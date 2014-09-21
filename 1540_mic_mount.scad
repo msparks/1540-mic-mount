@@ -1,77 +1,127 @@
-$fa = 0.1;
-$fs = 0.1;
+use <mscad/extrusions.scad>
+
+$fn = 200;
 
 kHeadbandWidth = 14;
 kHeadbandThickness = 2;
 kHeadbandInnerRadius = 92.5;
 kHeadbandOuterRadius = kHeadbandInnerRadius + kHeadbandThickness;
 kHeadbandGapWidth = 4;
+kBarrelLength = 34;
+kClipLength = 31;
 
-module isocelesTriangle(angle, height, width) {
-  b = height * tan(angle / 2);
+module headband() {
+  // How much of the headband to show.
+  sweep = 45;
 
-  linear_extrude(height=width, center=true, convexity=10, twist=0) {
-    polygon(points=[[0, 0], [height, 0], [0, b]], paths=[[0, 1, 2]]);
-  }
-  linear_extrude(height=width, center=true, convexity=10, twist=0) {
-    polygon(points=[[0, 0], [height, 0], [0, -b]], paths=[[0, 1, 2]]);
+  translate([0, 0, -kHeadbandInnerRadius])
+  // Rotate headband upright and centered.
+  rotate([90, -(90 - sweep) - sweep / 2])
+  // The cross-section of the headband is a rectangle with the middle missing
+  // for the gap.
+  rotate_extrude_sweep(outer_radius=kHeadbandOuterRadius,
+                       min_z=-kHeadbandWidth, max_z=kHeadbandWidth,
+                       sweep=sweep)
+  translate([kHeadbandInnerRadius + kHeadbandThickness / 2, 0])
+  difference() {
+    // Solid band.
+    square([kHeadbandThickness, kHeadbandWidth], center=true);
+
+    // Gap.
+    square([kHeadbandThickness, kHeadbandGapWidth], center=true);
   }
 }
 
-module cylinderArc(angle, inner_radius, height, depth) {
-  outer_radius = inner_radius + depth;
+module mount() {
+  sweep = 28;
+  radius = kHeadbandWidth / 2;
 
-  intersection() {
-    translate([outer_radius, 0, 0]) {
-      rotate([0, 0, 180]) {
-        isocelesTriangle(angle, kHeadbandOuterRadius, kHeadbandWidth);
-      }
-    }
-
-    difference() {
-      cylinder(h=height, r=outer_radius, center=true);
-      cylinder(h=height, r=inner_radius, center=true);
-    }
+  translate([0, 0, -kHeadbandInnerRadius])
+  // Rotate mount upright and centered.
+  rotate([90, -(90 - sweep) - sweep / 2])
+  // Cross-section is a semi-circle.
+  rotate_extrude_sweep(outer_radius=kHeadbandOuterRadius + 2 * radius,
+                       min_z=-kHeadbandWidth, max_z=kHeadbandWidth,
+                       sweep=sweep)
+  translate([kHeadbandOuterRadius, 0])
+  difference() {
+    circle(r=radius, center=true);
+    translate([-radius / 2, 0])
+    square([radius, radius * 2], center=true);
   }
+}
+
+module mount_clip() {
+  // The clip attaches under the headband and shares its curvature.
+  gap_fill(sweep=15, radius=kHeadbandInnerRadius - kHeadbandThickness);
+
+  // Clip anchor.
+  gap_fill(sweep=5, radius=kHeadbandInnerRadius - kHeadbandThickness,
+           rotation=3.5);
+  gap_fill(sweep=5, radius=kHeadbandInnerRadius, rotation=5);
+  clip_rounder(kHeadbandThickness * 2, -2.5);
+
+  translate([0, 0, -kHeadbandThickness])
+  clip_rounder(kHeadbandThickness, 7.5);
+  clip_rounder(kHeadbandThickness * 2, -7.5);
+}
+
+module gap_fill(sweep, radius, rotation=0) {
+  translate([0, 0, -kHeadbandInnerRadius])
+  rotate([90, -(90 - sweep) - sweep / 2 - rotation])
+  // Cross-section is a rectangle.
+  rotate_extrude_sweep(outer_radius=radius + kHeadbandThickness,
+                       min_z=-kHeadbandWidth, max_z=kHeadbandWidth,
+                       sweep=sweep)
+  translate([radius + kHeadbandThickness / 2, 0])
+  square([kHeadbandThickness, kHeadbandGapWidth], center=true);
+}
+
+module clip_rounder(height, rotation) {
+  translate([0, 0, -kHeadbandInnerRadius])
+  rotate([0, rotation, 0])
+  difference() {
+    cylinder(h=kHeadbandOuterRadius, d=kHeadbandGapWidth);
+    cylinder(h=kHeadbandOuterRadius - height, d=kHeadbandGapWidth);
+  }
+}
+
+module mount_rounder(height, rotation) {
+  translate([0, 0, -kHeadbandInnerRadius])
+  rotate([0, rotation, 0])
+  difference() {
+    cylinder(h=kHeadbandOuterRadius + height, d=kHeadbandWidth);
+    cylinder(h=kHeadbandOuterRadius, d=kHeadbandWidth);
+  }
+}
+
+module barrel() {
+  // Barrel outer cylinder.
+  translate([-9, 0, 7])
+  rotate([0, 90, 0])
+  cylinder(h=kBarrelLength, r=4.5);
+
+  // Cap at end of barrel.
+  translate([-9, 0, 7])
+  sphere(r=4.5);
+}
+
+module barrel_inner() {
+  // Barrel inner cylinder.
+  translate([-9, 0, 7])
+  rotate([0, 90, 0])
+  cylinder(h=kBarrelLength, r=3.5);
 }
 
 // Headband for reference.
-%translate([0, 0, -kHeadbandInnerRadius])
-rotate([90, -90, 0]) {
-  difference() {
-    cylinderArc(90, kHeadbandInnerRadius, kHeadbandWidth,
-                kHeadbandThickness);
-
-    // Headband gap.
-    cylinder(h=kHeadbandGapWidth,
-             r=kHeadbandOuterRadius,
-             center=true);
-  }
-}
+%headband();
 
 difference() {
   union() {
-    difference() {
-      translate([0, 0, -kHeadbandInnerRadius]) rotate([90, -90, 0]) {
-        // Jack.
-        cylinderArc(30, kHeadbandOuterRadius, kHeadbandWidth, 10);
-
-        // Anchor that fits in the headband gap.
-        rotate([0, 0, 6]) {
-          cylinderArc(10, kHeadbandInnerRadius, kHeadbandGapWidth,
-                      kHeadbandThickness);
-        }
-      }
-    }
-
-    // Barrel outer cylinder.
-    translate([-9, 0, 7]) rotate([0, 90, 0]) {
-      cylinder(h=34, r=4.5);
-    }
+    mount();
+    mount_clip();
+    barrel();
   }
 
-  // Barrel inner cylinder.
-  translate([-9, 0, 7]) rotate([0, 90, 0]) {
-    cylinder(h=34, r=3.5);
-  }
+  barrel_inner();
 }
