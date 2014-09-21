@@ -1,6 +1,7 @@
 use <mscad/extrusions.scad>
 
-$fn = 200;
+$fa = 2;
+$fs = 0.7;
 
 kHeadbandWidth = 14;
 kHeadbandThickness = 2;
